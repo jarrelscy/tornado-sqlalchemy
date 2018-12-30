@@ -106,7 +106,7 @@ class SessionFactory:
     """
 
     def __init__(self, database_url, pool_size=None, use_native_unicode=True,
-                 engine_events=None, session_events=None):
+                 engine_events=None, session_events=None, autoflush=True, autocommit=False, use_batch_mode=False):
         if engine_events:
             warnings.warn(
                 'engine_events is deprecated and will be removed in a future '
@@ -125,9 +125,13 @@ class SessionFactory:
         self._engine_events = engine_events
         self._session_events = session_events
         self._use_native_unicode = use_native_unicode
-
+        
         self._engine = None
         self._factory = None
+        
+        self._autoflush = autoflush
+        self._autocommit = autocommit
+        self._use_batch_mode = use_batch_mode
 
         self._setup()
 
@@ -139,7 +143,8 @@ class SessionFactory:
 
         if self._pool_size is not None:
             kwargs['pool_size'] = self._pool_size
-
+        kwargs['use_batch_mode'] = self._use_batch_mode
+        
         self._engine = create_engine(self._database_url, **kwargs)
 
         if self._engine_events:
@@ -147,7 +152,7 @@ class SessionFactory:
                 event.listen(self._engine, name, listener)
 
         self._factory = sessionmaker()
-        self._factory.configure(bind=self._engine)
+        self._factory.configure(bind=self._engine, autoflush=self._autoflush, autocommit=self._autocommit)
 
     def make_session(self):
         session = self._factory()
